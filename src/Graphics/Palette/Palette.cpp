@@ -217,12 +217,15 @@ bool Palette::loadMem(MemChunk& mc, Format format)
 		// Parse headers
 		if (format == Format::JASC)
 		{
-			if (!tz.checkToken("JASC-PAL") || !tz.checkToken("0100"))
+			if (!tz.check("JASC-PAL") || !tz.checkToken("0100"))
 			{
 				Global::error = "Invalid JASC palette (unknown header)";
 				Log::error(Global::error);
 				return false;
 			}
+
+			tz.skipToken();
+
 			int count = tz.getInteger();
 			if (count > 256 || count < 0)
 			{
@@ -233,12 +236,14 @@ bool Palette::loadMem(MemChunk& mc, Format format)
 		}
 		else if (format == Format::GIMP)
 		{
-			if (!tz.checkToken("GIMP") || !tz.checkToken("Palette"))
+			if (!tz.check("GIMP") || !tz.checkToken("Palette"))
 			{
 				Global::error = "Invalid GIMP palette (unknown header)";
 				Log::error(Global::error);
 				return false;
 			}
+
+			tz.skipToken();
 		}
 		// Now, parse
 		string  s1, s2, s3;
@@ -250,10 +255,11 @@ bool Palette::loadMem(MemChunk& mc, Format format)
 			// Since the lexer expects ## for comments, not just #, tell it explicitly to skip.
 			s1 = tz.getToken();
 			if (format == Format::CSV)
-				tz.checkToken(",");
+				tz.skipToken();
 			else if (format == Format::GIMP && s1 == "#")
 			{
 				tz.advToEndOfLine();
+				tz.skipToken();
 				continue;
 			}
 
@@ -261,20 +267,22 @@ bool Palette::loadMem(MemChunk& mc, Format format)
 			// Since we're ignoring them, skip the line.
 			s2 = tz.getToken();
 			if (format == Format::CSV)
-				tz.checkToken(",");
+				tz.skipToken();
 			else if (format == Format::GIMP && s2 == ":")
 			{
 				tz.advToEndOfLine();
+				tz.skipToken();
 				continue;
 			}
 
 			// Get the third token. In GIMP, the RGB values are followed by the color name, which
 			// can include spaces and is unquoted, so just skip the whole rest of the line.
 			s3 = tz.getToken();
-			if (format == Format::CSV)
-				tz.checkToken(",");
 			if (format == Format::GIMP)
+			{
 				tz.advToEndOfLine();
+				tz.skipToken();
+			}
 
 			// If we haven't skipped this part from a continue, then we have a colour triplet.
 			col.r     = StrUtil::asInt(s1);
